@@ -103,7 +103,7 @@ end
 %%
 
 for i = 1 : n_files,
-    
+    close all
     final = images{i};
     final_z = final(:,:,3);
     std_z = std_z .* test_im;
@@ -144,9 +144,10 @@ for i = 1 : n_files,
     for j = 1 : length(I),
         final(I(j),J(j),4:6) = test_im_2(I(j),J(j),:);   % transfer colour
     end
-
+    
+%     find_case(final, ~is_background);
     % RGB image layers must be converted to uint8 to display
-    imshow(uint8(final(:,:,4:6)));
+    figure, imshow(uint8(final(:,:,4:6)));
     pause;
 
 end    
