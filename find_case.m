@@ -8,13 +8,29 @@ function [ tl, tr, bl, br ] = find_case( image, mask )
     im_crop = imcrop(image(:,:,1:3), [0, 280, 640, 480]);
     mean(mean(im_crop(:,:,3)))
     [I,J] = find(im_crop(:,:,3) < 0.1 + mean(mean(im_crop(:,:,3))));
-    final = zeros(240,640,6);
+    final = zeros(201,640,6);
     for j = 1 : length(I),
         final(I(j),J(j),4:6) = [255 255 255];   % transfer colour
     end
     
-    figure, imshow(uint8(final(:,:,4:6)))
+    size(final)
+    size(im_crop)
+    final(:,:,1:3) = im_crop(:,:,1:3);
     
+%     figure, imshow(uint8(final(:,:,4:6)))
+    
+    for k=1 : 100
+        k
+        [points, output] = ransacplane(final(:,:,1:3), 1, 0.1,0.01,0.001,150,3);
+        if length(points) > 10000
+            figure, imshow(output)
+            pause;
+        end
+        
+        length(points)
+        
+        close all
+    end
 %     figure, imshow(im_crop)
 %     im_crop = masked;
     
@@ -98,8 +114,7 @@ function [ tl, tr, bl, br ] = find_case( image, mask )
 % 
 %   
 %   flag = 1;
-%   sr = r;
-%   sc = c;
+% 
 %   llinecount = 0;
 %   llinea = zeros(100,2);
 %   llinem = zeros(100,2);
@@ -108,11 +123,8 @@ function [ tl, tr, bl, br ] = find_case( image, mask )
 %   llinet = zeros(100,1);
 %   llined = zeros(100,1);
 %   while flag == 1
-%     ransacplane(masked, 1, 0.1,0.01,0.001,150,3);
+%     
 %     if flag == 1 & newcountl > 0 
-%       pointsleft = size(nr);
-%       sr = nr;
-%       sc = nc;
 %       llinecount = llinecount+1;
 %       [llinea(llinecount,:),llinem(llinecount,:),llinel(llinecount), ...
 %             llineg(llinecount)] = descrseg(frl,fcl,foreground,8);

@@ -9,18 +9,24 @@
 % [frfr,frfc] are the selected newcount points
 %
 
-function [] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
+function [points_in_plane, image] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
 
   % compute limit to matching tries
   N = ceil(log(probf)/ log(1 - probd*probd));
 
   s = size(depth);
+  
+  image = zeros(s);
   for i=1:N
       points_in_plane = 0;
       
       random_points = []; 
       
-      while size(selected) ~= [3 3
+      while 1
+        r_size = size(random_points);
+        if r_size(1) == 3
+           break 
+        end
         r = rand(3,1);
         selected = round(r * s);
 
@@ -31,7 +37,12 @@ function [] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
         if selected(2) == 0
            selected(2) = 1;
         end
-        random_points(j,:) = depth(selected(1),selected(2), :)
+       
+        if (sum(depth(selected(1), selected(2), :)) == 0)
+           continue 
+        end
+        
+        random_points = [random_points; depth(selected(1),selected(2), :)];
       end
             
       % plane equation
@@ -48,6 +59,7 @@ function [] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
             if (abs(distance) < tol)
                 points_in_plane = points_in_plane + 1;
                 plane_points(:,points_in_plane) = depth(k,l,:);
+                image(k,l,:) = [255 255 255];
             end
         end
       end
@@ -61,10 +73,10 @@ function [] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
   if state == 0
     'Hello'
   else
-    plane_points(1,:)
-    plot3(plane_points(1,:), plane_points(2,:), plane_points(3,:),'b+');
-    axis([0 480 0 640 0 480])
-    grid on
+%     plane_points(1,:)
+%     plot3(abs(plane_points(1,:)), abs(plane_points(2,:)), abs(plane_points(3,:)),'b+');
+%     axis([0 480 0 640 0 480])
+%     grid on
   end
 end
 
