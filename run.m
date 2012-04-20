@@ -103,7 +103,9 @@ end
 %%
 
 for i = 1 : n_files,
-    
+
+%i = 14;
+
     final = images{i};
     final_z = final(:,:,3);
     std_z = std_z .* test_im;
@@ -145,10 +147,24 @@ for i = 1 : n_files,
         final(I(j),J(j),4:6) = test_im_2(I(j),J(j),:);   % transfer colour
     end
 
+    [I,J] = find(abs(final_z - mean_z) > std_z);
+    newlist = zeros(length(I),5);
+    for j = 1 : length(I),
+        if (I(j) > 240),
+            rgb = final(I(j),J(j),4:6);
+            rgb = reshape(rgb,1,3);
+            if (rgb(1) < 50 && rgb(2) < 50 && rgb(3) < 50),
+                final(I(j),J(j),4:6) = [255,255,255];
+                newlist(j,:) = [I(j), J(j),rgb];
+            end
+        end
+    end
+    
+    [fitlist,plane] = select_patch(newlist(:,3:5), 1);
+    
     % RGB image layers must be converted to uint8 to display
     imshow(uint8(final(:,:,4:6)));
     pause;
 
 end    
 disp('Done');
-close all;
