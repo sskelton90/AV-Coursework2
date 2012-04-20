@@ -1,10 +1,5 @@
 files = dir(fullfile('Images', '*.mat'));
 field = imread('Images/field.jpg');
-%field = permute(field, [2 1 3]);
-
-% Clockwise from top left.
-%rect = [ 130, 41; 429, 40; 452, 477; 91, 478 ];
-%rect = [ 41, 130; 40, 429; 477, 452; 478, 91 ];
 
 rect  = [ 41, 130; 477, 91; 474, 452; 40, 429 ];
 
@@ -66,7 +61,6 @@ clear 'xyzrgb_*';
 new_avg_z = avg_z(:,:,1:7);
 
 mean_z = mean(new_avg_z, 3);
-
 variance_z = (avg_z - repmat(mean_z, [1,1,n_files])).^2;
 
 std_z  = mean(variance_z, 3);
@@ -83,6 +77,9 @@ for i = 1 : length(I),
         std_z(I(i), J(i)) = new_std;
     end
 end
+
+std_z(1:240,:) = 0.1;
+threshold = mean_z + std_z;
 
 %% Preload all the homography
 
@@ -104,42 +101,11 @@ end
 
 for i = 1 : n_files,
 
-%i = 14;
-
     final = images{i};
     final_z = final(:,:,3);
-    std_z = std_z .* test_im;
-
-    is_background = abs(final_z - mean_z) < std_z;
     
-    converged = 0;
-    [I,J] = find(~is_background);
-    old_length = length(I);
-    disp(num2str(old_length));    
-    
-    while (~converged),
-        
-        for j = 1 : length(I),
-            pI = I(j); pJ = J(j);
-            
-            if test_im(pI, pJ) == 1,
-                neighbours = is_background(pI - 1: pI + 1, pJ - 1 : pJ + 1);
-                
-                if (sum(sum(neighbours)) > 6), is_background(pI, pJ) = 1; end
-            end
-        end
-        
-        [I,J] = find(~is_background);
-        new_length = length(I);
-        
-        if (old_length == new_length), 
-            converged = 1; 
-        end
-        
-        disp(num2str(new_length));
-        old_length = new_length;
-    end
-    disp('Converged');
+    is_background = final_z < threshold;
+    is_background = is_background .* test_im;
     
     [I,J] = find(is_background);
     
@@ -147,21 +113,9 @@ for i = 1 : n_files,
         final(I(j),J(j),4:6) = test_im_2(I(j),J(j),:);   % transfer colour
     end
 
-    [I,J] = find(abs(final_z - mean_z) > std_z);
-    newlist = zeros(length(I),5);
-    for j = 1 : length(I),
-        if (I(j) > 240),
-            rgb = final(I(j),J(j),4:6);
-            rgb = reshape(rgb,1,3);
-            if (rgb(1) < 50 && rgb(2) < 50 && rgb(3) < 50),
-                final(I(j),J(j),4:6) = [255,255,255];
-                newlist(j,:) = [I(j), J(j),rgb];
-            end
-        end
-    end
-    
-    [fitlist,plane] = select_patch(newlist(:,3:5), 1);
-    
+    is_background = final_z > mean_z + (3 * std_z);
+    [I,J] = find(is_background);
+        
     % RGB image layers must be converted to uint8 to display
     imshow(uint8(final(:,:,4:6)));
     pause;
