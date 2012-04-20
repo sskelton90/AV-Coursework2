@@ -18,9 +18,9 @@ function [] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
   for i=1:N
       points_in_plane = 0;
       
-      random_points = zeros(3,3);
+      random_points = []; 
       
-      for j=1:3
+      while size(selected) ~= [3 3
         r = rand(3,1);
         selected = round(r * s);
 
@@ -31,26 +31,23 @@ function [] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
         if selected(2) == 0
            selected(2) = 1;
         end
-        random_points(j,1) = selected(1);
-        random_points(j,2) = selected(2);
-        random_points(j,3) = depth(selected(1), selected(2), 1);
+        random_points(j,:) = depth(selected(1),selected(2), :)
       end
-      
+            
       % plane equation
       v1 = random_points(1,:) - random_points(3,:);
       v2 = random_points(2,:) - random_points(3,:);
       
       cross_product = cross(v1,v2);
       coeff = dot(-random_points(3,:), cross(random_points(1,:), random_points(2,:)));
-      plane_eq = [cross_product  coeff];
+      plane_eq = [cross_product' ; coeff];
       
       for k = 1:s(1)
         for l = 1:s(2)
-            if 
-            distance = (plane_eq' * [depth(k,l,1)  1])/(sqrt(sum(cross_product.^2)));
+            distance = (plane_eq' * [depth(k,l,1) ; depth(k,l,2) ; depth(k,l,3) ; 1])/(sqrt(sum(cross_product.^2)));
             if (abs(distance) < tol)
                 points_in_plane = points_in_plane + 1;
-                plane_points(:,points_in_plane) = [k l depth(k,l,1)];
+                plane_points(:,points_in_plane) = depth(k,l,:);
             end
         end
       end
@@ -64,7 +61,6 @@ function [] = ransacplane(depth, tol,probd,probnd,probf,MINLEN,fign)
   if state == 0
     'Hello'
   else
-    'got here'
     plane_points(1,:)
     plot3(plane_points(1,:), plane_points(2,:), plane_points(3,:),'b+');
     axis([0 480 0 640 0 480])

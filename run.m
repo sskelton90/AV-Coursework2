@@ -99,6 +99,7 @@ end
 
 %%
 
+
 for i = 1 : n_files,
 
     final = images{i};
@@ -115,9 +116,10 @@ for i = 1 : n_files,
 
     is_background = final_z > mean_z + (3 * std_z);
     [I,J] = find(is_background);
-        
+         find_case(final, ~is_background);
     % RGB image layers must be converted to uint8 to display
     imshow(uint8(final(:,:,4:6)));
+
     pause;
 
 end    
