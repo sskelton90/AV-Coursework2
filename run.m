@@ -99,8 +99,7 @@ end
 
 %%
 
-
-for i = 10 : n_files,
+for i = 15 : n_files,
 close all
     final = images{i};
     final_z = final(:,:,3);
@@ -113,14 +112,43 @@ close all
     for j = 1 : length(I),
         final(I(j),J(j),4:6) = test_im_2(I(j),J(j),:);   % transfer colour
     end
-
-    is_background = final_z > mean_z + (3 * std_z);
-    [I,J] = find(is_background);
-         find_case(final, ~is_background);
-    % RGB image layers must be converted to uint8 to display
-%     imshow(uint8(final(:,:,4:6)));
-
-    pause;
+    % figure, imshow(uint8(final(:,:,4:6)))
+    
+    % Suitcase time
+    mask = [zeros(270, 640) ; ones(200, 640); zeros(10, 640)];
+    not_background = final_z > mean_z + (3 * std_z);
+    not_background = not_background .* mask;
+    [I,J] = find(not_background);
+    searchspace = zeros(length(I),5);
+    
+    for j = 1 : length(I),
+        final(I(j),J(j),4:6) = [255 255 255];   % transfer colour
+        searchspace(j,:) = [I(j), J(j), final(I(j),J(j),1), ... 
+                                        final(I(j),J(j),2), ... 
+                                        final(I(j),J(j),3)];
+    end
+    
+    disp('Growing plane now...');
+    
+    [points2, failed] = growplane(searchspace);
+    size(points2)
+    if (~failed),
+        disp(['Number of points: ' num2str(size(points2,1))]);
+        
+        for i0 = 1 : size(points2,1),
+            final(points2(i0,1),points2(i0,2),4:6) = [160 160 160];   % transfer colour
+        end
+        
+        imshow(uint8(final(:,:,4:6)));
+        pause;
+    else
+        disp('lolno');
+    end
+    
+     
+%   RGB image layers must be converted to uint8 to display
+%   imshow(uint8(final(:,:,4:6)));
+%    pause;
 
 end    
 disp('Done');
