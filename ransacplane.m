@@ -22,11 +22,7 @@ function [points_in_plane, image] = ransacplane(depth, tol,probd,probnd,probf,MI
       
       random_points = []; 
       
-      while 1
-        r_size = size(random_points);
-        if r_size(1) == 3
-           break 
-        end
+      for j = 1:100
         r = rand(3,1);
         selected = round(r * s);
 
@@ -38,32 +34,38 @@ function [points_in_plane, image] = ransacplane(depth, tol,probd,probnd,probf,MI
            selected(2) = 1;
         end
        
-        if (sum(depth(selected(1), selected(2), :)) == 0)
-           continue 
-        end
-        
-        random_points = [random_points; depth(selected(1),selected(2), :)];
+         random_points = [random_points ; depth(selected(1),selected(2), :)];
       end
+      
+      list = [];
+      t = size(random_points);
+      for k = 1:t(1)
+          for l = 1:t(2)
+              list = [list ; random_points(k,l,:)];
+          end
+      end
+      
+      [plane,fit] = fitplane(list);
             
-      % plane equation
-      v1 = random_points(1,:) - random_points(3,:);
-      v2 = random_points(2,:) - random_points(3,:);
-      
-      cross_product = cross(v1,v2);
-      coeff = dot(-random_points(3,:), cross(random_points(1,:), random_points(2,:)));
-      plane_eq = [cross_product' ; coeff];
-      
-      for k = 1:s(1)
-        for l = 1:s(2)
-            distance = (plane_eq' * [depth(k,l,1) ; depth(k,l,2) ; depth(k,l,3) ; 1])/(sqrt(sum(cross_product.^2)));
-            if (abs(distance) < tol)
-                points_in_plane = points_in_plane + 1;
-                plane_points(:,points_in_plane) = depth(k,l,:);
-                image(k,l,:) = [255 255 255];
-            end
-        end
-      end
-      
+%       % plane equation
+%       v1 = random_points(1,:) - random_points(3,:);
+%       v2 = random_points(2,:) - random_points(3,:);
+%       
+%       cross_product = cross(v1,v2);
+%       coeff = dot(-random_points(3,:), cross(random_points(1,:), random_points(2,:)));
+%       plane_eq = [cross_product' ; coeff];
+%       
+%       for k = 1:s(1)
+%         for l = 1:s(2)
+%             distance = (plane_eq' * [depth(k,l,1) ; depth(k,l,2) ; depth(k,l,3) ; 1])/(sqrt(sum(cross_product.^2)));
+%             if (abs(distance) < tol)
+%                 points_in_plane = points_in_plane + 1;
+%                 plane_points(:,points_in_plane) = depth(k,l,:);
+%                 image(k,l,:) = [255 255 255];
+%             end
+%         end
+%       end
+%       
       if points_in_plane >= MINLEN
          state = 1;
          break;
@@ -72,7 +74,7 @@ function [points_in_plane, image] = ransacplane(depth, tol,probd,probnd,probf,MI
   
   if state == 0
     'Hello'
-  else
+  else 
 %     plane_points(1,:)
 %     plot3(abs(plane_points(1,:)), abs(plane_points(2,:)), abs(plane_points(3,:)),'b+');
 %     axis([0 480 0 640 0 480])

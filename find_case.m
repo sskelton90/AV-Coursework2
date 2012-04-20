@@ -20,16 +20,9 @@ function [ tl, tr, bl, br ] = find_case( image, mask )
 %     figure, imshow(uint8(final(:,:,4:6)))
     
     for k=1 : 100
-        k
-        [points, output] = ransacplane(final(:,:,1:3), 1, 0.1,0.01,0.001,150,3);
-        if length(points) > 10000
-            figure, imshow(output)
-            pause;
-        end
         
-        length(points)
-        
-        close all
+        ransacplane(final(:,:,1:3), 1, 0.1,0.01,0.001,150,3);
+ 
     end
 %     figure, imshow(im_crop)
 %     im_crop = masked;
