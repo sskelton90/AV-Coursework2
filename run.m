@@ -123,31 +123,28 @@ for i = 15 : 25,
     not_background = final_z > mean(mean(final_z)) + 0.36;
     not_background = not_background .* mask;
     [I,J] = find(not_background);
-    searchspace = zeros(length(I),5);
-    ss2 = zeros(length(I),2);
+
     
     for j = 1 : length(I),
         final(I(j),J(j),4:6) = [255 0 0];   % transfer colour
-        searchspace(j,:) = [I(j), J(j), final(I(j),J(j),1), ... 
-                                        final(I(j),J(j),2), ... 
-                                        final(I(j),J(j),3)];
-        %ss2(j,:) = [I(j), J(j)];    
     end
     
+    % Find the largest connected component
     largest = getlargest(not_background);
     [I,J] = find(largest);
-    
+
+    searchspace = zeros(length(I),5);
     for j = 1 : length(I),
         final(I(j), J(j),4:6) = [0 255 255];
-    end
+        searchspace(j,:) = [I(j), J(j), final(I(j),J(j),1), ... 
+                                final(I(j),J(j),2), ... 
+                                final(I(j),J(j),3)];
         
-    
-%    imshow(uint8(final(:,:,4:6)));
-%    pause;
+    end
   
 %     disp('Growing plane now...');
 %     
-%     [points2, failed] = growplane(searchspace);
+%      [points2, failed] = growplane(searchspace);
 % 
 %     if (~failed),
 %         disp(['Number of points: ' num2str(size(points2,1))]);
@@ -161,6 +158,20 @@ for i = 15 : 25,
 %     else
 %         disp('lolno');
 %     end
+
+    % Fit a plane to the filtered points, and check for all points to see
+    % if they lie on the plane.
+    [plane,fit] = fitplane(searchspace(:,3:5));
+    
+    for r = 300 : 470,
+        for c = 1 : 640,
+            xyzw = [final(r,c,1), final(r,c,2), final(r,c,3), 1];
+            if ( abs(dot(xyzw, plane)) < 0.02 ),
+                final(r,c,4:6) = [255 0 255];
+            end
+        end
+    end
+    
     
      
 %   RGB image layers must be converted to uint8 to display
