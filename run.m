@@ -99,7 +99,8 @@ end
 
 %%
 
-for i = 15 : n_files,
+% for i = 15 : n_files,
+for i = 15:25,
 close all
     final = images{i};
     final_z = final(:,:,3);
@@ -116,7 +117,7 @@ close all
     
     % Suitcase time
     mask = [zeros(270, 640) ; ones(200, 640); zeros(10, 640)];
-    not_background = final_z > mean_z + (3 * std_z);
+    not_background = final_z > mean_z + (3.6 * std_z);
     not_background = not_background .* mask;
     [I,J] = find(not_background);
     searchspace = zeros(length(I),5);
@@ -126,6 +127,7 @@ close all
         searchspace(j,:) = [I(j), J(j), final(I(j),J(j),1), ... 
                                         final(I(j),J(j),2), ... 
                                         final(I(j),J(j),3)];
+        
     end
     
     disp('Growing plane now...');
@@ -134,12 +136,23 @@ close all
     size(points2)
     if (~failed),
         disp(['Number of points: ' num2str(size(points2,1))]);
-        
+        binary_image = zeros(size(final,1), size(final,2));
         for i0 = 1 : size(points2,1),
-            final(points2(i0,1),points2(i0,2),4:6) = [160 160 160];   % transfer colour
+            final(points2(i0,1),points2(i0,2),4:6) = [160 160 160]; % transfer colour
+            binary_image(points2(i0,1),points2(i0,2),1) = 255;
         end
         
-        imshow(uint8(final(:,:,4:6)));
+        im_opened = imopen(binary_image, strel('rectangle',[6 6]));
+        figure, imshow(im_opened);
+        
+        C = corner(im_opened, 'QualityLevel', 0.9)
+        
+        figure, imshow(bwperim(binary_image));
+        
+        for i1 = 1 : size(C,1),
+           final(C(i1,1), C(i1,2), 4) = 255; 
+        end
+        figure, imshow(uint8(final(:,:,4:6)));
         pause;
     else
         disp('lolno');
