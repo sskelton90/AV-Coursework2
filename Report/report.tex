@@ -72,7 +72,9 @@ Implementing the homographic transfer of the video onto the rectangular plane th
 \subsection{Transferring the moving image onto to the rectangle}
 The last step in transferring the moving image onto the rectangle was to calculate the projection matrix that represented the transformation for each pixel. This was calculated using the \emph{esthomog.m} function from the IVR course. When using the \emph{esthomog.m} function the order of the points is significant in order to ensure that all pixels are transferred in the correct order, preserving the image. For this reason, the corner points were first sorted by x-coordinate and split into two collections: the left-most and the right-most. From here it was possible to order the points in a clockwise order by further sorting the two collections by the y-coordinates. \\
 
-The moving image pixels were then transferred to the rectangle using the projection matrix found by \emph{esthomog.m}.
+The moving image pixels were then transferred to the rectangle using the projection matrix found by \emph{esthomog.m}. \\
+
+This entire process was repeated for each of the individual frames in both the video of the person walking and each frame in the animated image.
 
 \section{Results}
 
