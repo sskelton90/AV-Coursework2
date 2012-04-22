@@ -22,6 +22,16 @@ n_files = length(files);
 images = cell(1, n_files);
 avg_z  = zeros(480, 640, n_files);
 
+% Setup video writer
+vw = VideoWriter('AV_movie.avi');
+vw.FrameRate = 6;
+vw.open();
+
+base = 'Images/excitement';
+animation = [];
+for i = 1 : 10,
+    animation(i,:,:,:) = imread(strcat(base,int2str(i),'.jpg'));
+end
 %%
 
 % Preload all the images
@@ -99,7 +109,7 @@ end
 
 %%
 
-for i = 15 : 25,
+for i = 1 : 35,
 
     final = images{i};
     final_z = final(:,:,3);
@@ -112,7 +122,6 @@ for i = 15 : 25,
     for j = 1 : length(I),
         final(I(j),J(j),4:6) = test_im_2(I(j),J(j),:);   % transfer colour
     end
-    % figure, imshow(uint8(final(:,:,4:6)))
     
     % Suitcase time
     mask = [zeros(270, 640) ; ones(200, 640); zeros(10, 640)];
@@ -159,111 +168,104 @@ for i = 15 : 25,
             end
         end
     end
-    
-    im_opened = imopen(binary_image, strel('rectangle',[8 8]));
-    C = corner(im_opened, 'QualityLevel', 0.2);
-    
-    max_dist = 0;
-    point1 = [[],[]];
-    point2 = [[],[]];
-    point3 = [[],[]];
-    point4 = [[],[]];
+    if (i >= 15 && i <= 29),
+        im_opened = imopen(binary_image, strel('rectangle',[8 8]));
+        C = corner(im_opened, 'QualityLevel', 0.2);
 
-    for d1 = 1 : length(C),
-        for d2 = 2 : length(C),
-            if d1 == d2,
-                continue
-            end
-            distance = calculate_distance(C(d1,:),C(d2,:));
-            if distance > max_dist,
-                max_dist = distance;
-                point1(1) = C(d1,1);
-                point1(2) = C(d1,2);
-                point2(1) = C(d2,1);
-                point2(2) = C(d2,2);
-                index1 = d1;
-                index2 = d2;
-            end
-        end
-    end
-    
-    newC = setdiff(C,[point1 ; point2],'rows');
-    
-    max_dist = 0;
-    for d1 = 1 : length(newC),
-        for d2 = 2 : length(newC),
-            if d1 == d2,
-                continue
-            end
-            distance = calculate_distance(newC(d1,:),newC(d2,:));
-            if distance > max_dist,
-                d1_p1 = calculate_distance(newC(d1,:),point1);
-                d1_p2 = calculate_distance(newC(d1,:),point2);
-                d2_p1 = calculate_distance(newC(d2,:),point1);
-                d2_p2 = calculate_distance(newC(d2,:),point2);
-                
-                dists = [d1_p1, d1_p2, d2_p1, d2_p2];
-                
-                if (~isempty(find(dists<50, 1))),
+        max_dist = 0;
+        point1 = [[],[]];
+        point2 = [[],[]];
+        point3 = [[],[]];
+        point4 = [[],[]];
+
+        for d1 = 1 : length(C),
+            for d2 = 2 : length(C),
+                if d1 == d2,
                     continue
                 end
-
-                max_dist = distance;
-                point3(1) = newC(d1,1);
-                point3(2) = newC(d1,2);
-                point4(1) = newC(d2,1);
-                point4(2) = newC(d2,2);
+                distance = calculate_distance(C(d1,:),C(d2,:));
+                if distance > max_dist,
+                    max_dist = distance;
+                    point1(1) = C(d1,1);
+                    point1(2) = C(d1,2);
+                    point2(1) = C(d2,1);
+                    point2(2) = C(d2,2);
+                    index1 = d1;
+                    index2 = d2;
+                end
             end
         end
-    end
 
-    homo_points = [point1 ; point2 ; point3 ; point4];
-    
-    left_most = sortrows(homo_points,1);
-    right_most = sortrows(left_most(3:4,:),2);
-    left_most = sortrows(left_most(1:2,:),2);
+        newC = setdiff(C,[point1 ; point2],'rows');
 
-    top_left = left_most(1,:);
-    top_right = right_most(1,:);
-    bottom_right = right_most(2,:);
-    bottom_left = left_most(2,:);
-    
-    cat = imread('Images/cat.jpg');
-    % Find the homographic transfer
-    cat_x = size(cat, 2);
-    cat_y = size(cat, 1);
-    test_im_3 = zeros(480, 640, 3);
-    
-    
-    UV = [top_left', top_right', bottom_left', bottom_right']'; 
-    XY = [[1,1]',[1,cat_x]', [cat_y,1]', [cat_y,cat_x]']';    % source points
+        max_dist = 0;
+        for d1 = 1 : length(newC),
+            for d2 = 2 : length(newC),
+                if d1 == d2,
+                    continue
+                end
+                distance = calculate_distance(newC(d1,:),newC(d2,:));
+                if distance > max_dist,
+                    d1_p1 = calculate_distance(newC(d1,:),point1);
+                    d1_p2 = calculate_distance(newC(d1,:),point2);
+                    d2_p1 = calculate_distance(newC(d2,:),point1);
+                    d2_p2 = calculate_distance(newC(d2,:),point2);
 
-    P = esthomog(UV,XY,4);
+                    dists = [d1_p1, d1_p2, d2_p1, d2_p2];
 
-    for r = 1 : size(final,2)
-        for c = 1 : size(final,1)
-            v=P*[r,c,1]';        % project destination pixel into source
-            y=round(v(1)/v(3));  % undo projective scaling and round to nearest integer
-            x=round(v(2)/v(3));
-            if (x >= 1) && (x <= cat_x) && (y >= 1) && (y <= cat_y)
-                final(c,r,4:6)=cat(y,x,:);   % transfer colour
+                    if (~isempty(find(dists<50, 1))),
+                        continue
+                    end
+
+                    max_dist = distance;
+                    point3(1) = newC(d1,1);
+                    point3(2) = newC(d1,2);
+                    point4(1) = newC(d2,1);
+                    point4(2) = newC(d2,2);
+                end
+            end
+        end
+
+        homo_points = [point1 ; point2 ; point3 ; point4];
+
+        left_most = sortrows(homo_points,1);
+        right_most = sortrows(left_most(3:4,:),2);
+        left_most = sortrows(left_most(1:2,:),2);
+
+        top_left = left_most(1,:);
+        top_right = right_most(1,:);
+        bottom_right = right_most(2,:);
+        bottom_left = left_most(2,:);
+
+        cat = imread('Images/cat.jpg');
+        % Find the homographic transfer
+        cat_x = size(animation, 3);
+        cat_y = size(animation, 2);
+
+        UV = [top_left', top_right', bottom_left', bottom_right']'; 
+        XY = [[1,1]',[1,cat_x]', [cat_y,1]', [cat_y,cat_x]']';    % source points
+
+        P = esthomog(UV,XY,4);
+
+        for r = 1 : size(final,2)
+            for c = 1 : size(final,1)
+                v=P*[r,c,1]';        % project destination pixel into source
+                y=round(v(1)/v(3));  % undo projective scaling and round to nearest integer
+                x=round(v(2)/v(3));
+                if (x >= 1) && (x <= cat_x) && (y >= 1) && (y <= cat_y)
+                    final(c,r,4:6)=animation(1,y,x,:);   % transfer colour
+                end
             end
         end
     end
     
 %   RGB image layers must be converted to uint8 to display
 
-    figure, imshow(uint8(final(:,:,4:6)));
-    hold on
-    plot(C(:,1), C(:,2), 'b*');
-    plot(top_left(1), top_left(2), 'b+');
-    plot(top_right(1), top_right(2), 'g+');
-    plot(bottom_right(1), bottom_right(2), 'r+');
-    plot(bottom_left(1), bottom_left(2), 'y+');
-    hold off
-   pause;
-   
-   close all;
+    imshow(uint8(final(:,:,4:6)));
+    writeVideo(vw,getframe(gcf));
 
-end    
+
+end  
+close(vw);
+
 disp('Done');
