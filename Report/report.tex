@@ -58,9 +58,21 @@ Various techniques were used in attempts to find the plane.
 \subsubsection{RANSAC}
 A RANSAC plane-finding algorithm was tried. In each iteration, 3 random points were picked and a plane was fit to them. If the number of points within the search space that fit the plane (to a given threshold, around 0.005) was between 10000 and 15000, the plane was considered as a candidate plane. After 100 iterations, the candidate plane with the smallest sum error between itself and the points that lay on it was returned. \\
 
-The problem with this method was that it was extremely slow, and often returned planes that did not 
+The problem with this method was that it was extremely slow, and often returned planes that did not contain all of the points contained in the rectangular plane.
 
 \subsection{Estimating the corners of the rectangle}
+\begin{figure}
+\includegraphics[width=\textwidth]{corners}
+\caption{The rectangular plane (in magenta) with each of the corner points returned by the \emph{corner} function. The coloured asterisks represent the corners selected by the system.}
+\label{img_corners}
+\end{figure}
+
+Implementing the homographic transfer of the video onto the rectangular plane the walking person was holding required the coordinates of the 4 corner points of the rectangle. To find the correct corner points, the binary image of the rectangle was opened using a rectangular structuring element to emphasise the corners. Matlab's \emph{corner} function was then performed on the binary image producing many corners, most of which were not the required corners for the homographic transfer. The extra corners found in this step were caused by the jagged edges of the binary image which also contain corners as defined by the corner-finding algorithm. Using a property of rectangles which states that the points with the largest distance between them are the corners diagonally opposite each other, it was possible to select the four corners by selecting the two pairs of points with the largest distance between. Occasionally, because of the noisy edges of the rectangle, this method returned points that represented the same corners. To solve this problem a further condition was added to the corner selecting algorithm that ensured that corners selected were at least 50 pixels apart.
+
+\subsection{Transferring the moving image onto to the rectangle}
+The last step in transferring the moving image onto the rectangle was to calculate the projection matrix that represented the transformation for each pixel. This was calculated using the \emph{esthomog.m} function from the IVR course. When using the \emph{esthomog.m} function the order of the points is significant in order to ensure that all pixels are transferred in the correct order, preserving the image. For this reason, the corner points were first sorted by x-coordinate and split into two collections: the left-most and the right-most. From here it was possible to order the points in a clockwise order by further sorting the two collections by the y-coordinates. \\
+
+The moving image pixels were then transferred to the rectangle using the projection matrix found by \emph{esthomog.m}.
 
 \section{Results}
 
@@ -68,3 +80,4 @@ The problem with this method was that it was extremely slow, and often returned 
 \section{Conclusion}
 
 \end{document}
+
