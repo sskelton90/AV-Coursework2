@@ -29,7 +29,7 @@ vw.open();
 
 base = 'Images/excitement';
 animation = [];
-for i = 1 : 10,
+for i = 1 : 15,
     animation(i,:,:,:) = imread(strcat(base,int2str(i),'.jpg'));
 end
 %%
@@ -120,7 +120,7 @@ for i = 1 : n_files,
         final(I(j),J(j),4:6) = test_im_2(I(j),J(j),:);   % transfer colour
     end
     
-    if (i >= 10 && i <= 28),
+    if (i >= 14 && i <= 29),
         % Suitcase time
         mask = [zeros(270, 640) ; ones(200, 640); zeros(10, 640)];
 
@@ -177,7 +177,7 @@ for i = 1 : n_files,
         binary_image = zeros(480,640);
         for j = 1 : length(I),
                 % Pink denotes that it is part of largest component on the plane
-    %            final(I(j), J(j),4:6) = [255 0 255];
+%                final(I(j), J(j),4:6) = [255 0 255];
                  binary_image(I(j),J(j)) = 255;
         end
 
@@ -236,6 +236,7 @@ for i = 1 : n_files,
                     point4 = newC(d2,:);
                 end
             end
+        end
 
             homo_points = [point1 ; point2 ; point3 ; point4];
 
@@ -263,15 +264,15 @@ for i = 1 : n_files,
                     y=round(v(1)/v(3));  % undo projective scaling and round to nearest integer
                     x=round(v(2)/v(3));
                     if (x >= 1) && (x <= cat_x) && (y >= 1) && (y <= cat_y)
-                        final(c,r,4:6)=animation(1,y,x,:);   % transfer colour
+                        final(c,r,4:6)=animation(mod(i-13,10)+1,y,x,:);   % transfer colour
                     end
                 end
             end
-        end
     end
+  
 %   RGB image layers must be converted to uint8 to display
-
     imshow(uint8(final(:,:,4:6)));
+
     writeVideo(vw,getframe(gcf));
 
 
