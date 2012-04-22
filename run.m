@@ -110,7 +110,7 @@ end
 
 %% Find pixels for transfer, carry out transfer
 
-for i = 1 : n_files,
+for i = 13 : 28,
     disp('-------------------------------------------------');
     disp(['Using file ' num2str(i)]);
     final = images{i};
@@ -128,6 +128,9 @@ for i = 1 : n_files,
         final(I(j),J(j),4:6) = bg_projection(I(j),J(j),:);
     end
     
+   % imshow(uint8(final(:,:,4:6)));
+    
+    %if i == 0,
     if (i > 13 && i < 29),      % Transfer video
         
         anim = animation{i - 13};
@@ -150,11 +153,12 @@ for i = 1 : n_files,
         not_background = final_z > mean(mean(final_z)) + 0.36;
         not_background = not_background .* mask;
         
-    %    [I,J] = find(not_background);
-    %     for j = 1 : length(I),
-    %         % Red denotes that it is not in the background
-    %         final(I(j),J(j),4:6) = [255 0 0];   % transfer colour
-    %     end
+%        [I,J] = find(not_background);
+%         for j = 1 : length(I),
+%             % Red denotes that it is not in the background
+%             final(I(j),J(j),4:6) = [255 0 0];   % transfer colour
+%         end
+        
     
         % Limit the search space to the largest connected component of the
         % current pixels
@@ -198,10 +202,13 @@ for i = 1 : n_files,
         binary_image = zeros(480,640);
         for j = 1 : length(I),
         % Pink denotes that it is part of largest component on the plane
-%                final(I(j), J(j),4:6) = [255 0 255];
+%                  final(I(j), J(j),4:6) = [255 0 255];
                  binary_image(I(j),J(j)) = 255;
         end
-
+        
+%         imshow(uint8(final(:,:,4:6)));
+%         pause;
+        
         disp('Finding the corners.');
         tic;
         
@@ -294,7 +301,7 @@ for i = 1 : n_files,
     end
   
     % RGB image layers must be converted to uint8 to display
-    imshow(uint8(final(:,:,4:6)));
+      imshow(uint8(final(:,:,4:6)));
     
     if (write_video)
         disp('Writing video.')

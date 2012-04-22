@@ -2,9 +2,10 @@
 \BOOKMARK [1][-]{section.2}{Algorithms}{}% 2
 \BOOKMARK [2][-]{subsection.2.1}{Finding the Background}{section.2}% 3
 \BOOKMARK [2][-]{subsection.2.2}{Image Transfer}{section.2}% 4
-\BOOKMARK [2][-]{subsection.2.3}{Finding the Plane}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.3}{Finding the Rectangular Plane}{section.2}% 5
 \BOOKMARK [3][-]{subsubsection.2.3.1}{Pruning the Search Space}{subsection.2.3}% 6
 \BOOKMARK [3][-]{subsubsection.2.3.2}{RANSAC}{subsection.2.3}% 7
-\BOOKMARK [2][-]{subsection.2.4}{Estimating the corners of the rectangle}{section.2}% 8
-\BOOKMARK [1][-]{section.3}{Results}{}% 9
-\BOOKMARK [1][-]{section.4}{Conclusion}{}% 10
+\BOOKMARK [3][-]{subsubsection.2.3.3}{Plane Fitting}{subsection.2.3}% 8
+\BOOKMARK [2][-]{subsection.2.4}{Video Transfer}{section.2}% 9
+\BOOKMARK [1][-]{section.3}{Results}{}% 10
+\BOOKMARK [1][-]{section.4}{Conclusion}{}% 11

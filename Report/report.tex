@@ -1,5 +1,7 @@
 \documentclass[11pt]{article}
 
+\usepackage{wrapfig}
+\usepackage{subfig}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{amsmath}
@@ -21,65 +23,112 @@
 
 \section{Introduction}
 
-In this assignment, we were tasked with augmenting a sequence of images, via homographic transfer of a given background image, and a sequence of images from a separate video.
+In this assignment, we were tasked with augmenting a sequence of images, via homographic transfer of a given background image, and a sequence of images from a separate video. We utilised various algorithms to build a system that can robustly extract the person from in front of the wall and transfer the given background; as well as locate the rectangular plane fairly reliably to transfer the video onto it. 
 
 \section{Algorithms}
 \subsection{Finding the Background}
-The points in the trapezoid are found manually and hard-coded into the background-finding algorithm. \\
+The points in the trapezoid are found manually and hard-coded into the background-finding algorithm. 
 
-To find the points of interest (within the back wall), the equations of the lines between neighbouring corners are found. Naive interpolation is used to find pixels on the lines. \\
+To find the points of interest (within the back wall), the equations of the lines between neighbouring corners are found. Naive interpolation is used to find pixels on the lines. Each row of pixels within the bounding rectangle are scanned to find the left-most and right-most pixels in each line. All pixels between these two pixels (inclusive) are marked on a indicator matrix of size \emph{480 x 640}. 
 
-Each row of pixels within the bounding rectangle are scanned to find the left-most and right-most pixels in each line. All pixels between these two pixels (inclusive) are marked on a indicator matrix of size \emph{480 x 640}. \\
-
-To find the foreground, the z-values for each pixel are averaged over the first 7 frames (before the man walks in). In each frame, the foreground is then given by every pixel that is at least a threshold value in front of its mean value. \\
-
-At the top of the image, the pixels are further away and have a smaller variance. Many pixels remain as background pixels throughout, and hence many of them are cast as ``foreground" pixels over different frames. Hence, the threshold value is set at 0.1. \\
-
-At the bottom of the image, the pixels are nearer, with a large variance. Most of the pixels will be covered by the walking man's legs in at least one frame. Using 0.1 as the threshold value hence causes incorrect classification of the man's trousers as the background (as seen in Figure \ref{failbg}). Instead, the threshold is set to the standard deviation of each pixel over all frames. \\
+To find the foreground, the z-values for each pixel are averaged over the first 7 frames (before the man walks in). In each frame, the foreground is then given by every pixel that is at least a threshold value in front of its mean value. At the top of the image, the pixels are further away and have a smaller variance. Many pixels remain as background pixels throughout, and hence many of them are cast as ``foreground" pixels over different frames (as seen in Figure \ref{fig:failbg2} ). Hence, the threshold value is set at 0.1. At the bottom of the image, the pixels are nearer, with a large variance. Most of the pixels will be covered by the walking man's legs in at least one frame. Using 0.1 as the threshold value hence causes incorrect classification of the man's trousers as the background (as seen in Figure \ref{fig:failbg} ). Instead, the threshold is set to the standard deviation of each pixel over all frames. 
 
 The classified background pixels are then masked with the indicator matrix.
 
 \begin{figure}
-\includegraphics[width=\textwidth]{floatingman}
-\caption{Using 0.1 as the threshold causes incorrect classification of lower pixels.}
-\label{failbg}
+  \centering
+  \subfloat[Threshold 1std]{\label{fig:failbg2}\includegraphics[width=0.5\textwidth]{missingbg}} ~
+  \subfloat[Threshold 0.1]{\label{fig:failbg}\includegraphics[width=0.5\textwidth]{floatingman}} 
+  \caption{Setting the threshold to either 0.1 or 1 standard deviation above the mean results in errors. In Figure \ref{fig:failbg}, not all the pixels at the top of the image are coloured in. In Figure \ref{fig:failbg} the man's legs float above the bottom line of grass. The red and magenta colouring are a due to foreground detection. To solve this, a mixture of these two was used.}
+  \label{fig:failing}
 \end{figure}
 
 \subsection{Image Transfer}
 
-To transfer the given image of the field onto the background pixels, the given code for homographic transfer \emph{(esthomog.m)} is used. Due to the crude nature of the interpolation between corners, some of the pixels in the background area map to points just outside the boundaries of the field image. These pixels are capped to the boundary of the field image. 
+To transfer the given image of the field onto the background pixels, the given code for homographic transfer \emph{(esthomog.m)} is used. Due to the crude nature of the interpolation between corners, some of the pixels in the background area map to points just outside the boundaries of the field image. These pixels are capped to the boundary of the field image. The results of this can be seen in Figure \ref{fig:proj}.
 
-\subsection{Finding the Plane}
-
-Various techniques were used in attempts to find the plane.
-
-\subsubsection{Pruning the Search Space}
-
-\subsubsection{RANSAC}
-A RANSAC plane-finding algorithm was tried. In each iteration, 3 random points were picked and a plane was fit to them. If the number of points within the search space that fit the plane (to a given threshold, around 0.005) was between 10000 and 15000, the plane was considered as a candidate plane. After 100 iterations, the candidate plane with the smallest sum error between itself and the points that lay on it was returned. \\
-
-The problem with this method was that it was extremely slow, and often returned planes that did not contain all of the points contained in the rectangular plane.
-
-\subsection{Estimating the corners of the rectangle}
-\begin{figure}
-\includegraphics[width=\textwidth]{corners}
-\caption{The rectangular plane (in magenta) with each of the corner points returned by the \emph{corner} function. The coloured asterisks represent the corners selected by the system.}
-\label{img_corners}
+\begin{figure}[h]
+  \centering
+  \subfloat{\includegraphics[width=0.35\textwidth]{proj1}} ~
+  \subfloat{\includegraphics[width=0.35\textwidth]{proj3}} 
+  \hspace{0pt}
+  \subfloat{\includegraphics[width=0.35\textwidth]{proj4}} ~
+  \subfloat{\includegraphics[width=0.35\textwidth]{proj5}}
+  \caption{Frames after transferring the background image.}
+  \label{fig:proj}
 \end{figure}
 
-Implementing the homographic transfer of the video onto the rectangular plane the walking person was holding required the coordinates of the 4 corner points of the rectangle. To find the correct corner points, the binary image of the rectangle was opened using a rectangular structuring element to emphasise the corners. Matlab's \emph{corner} function was then performed on the binary image producing many corners, most of which were not the required corners for the homographic transfer. The extra corners found in this step were caused by the jagged edges of the binary image which also contain corners as defined by the corner-finding algorithm. Using a property of rectangles which states that the points with the largest distance between them are the corners diagonally opposite each other, it was possible to select the four corners by selecting the two pairs of points with the largest distance between. Occasionally, because of the noisy edges of the rectangle, this method returned points that represented the same corners. To solve this problem a further condition was added to the corner selecting algorithm that ensured that corners selected were at least 50 pixels apart.
+\subsection{Finding the Rectangular Plane}
 
-\subsection{Transferring the moving image onto to the rectangle}
-The last step in transferring the moving image onto the rectangle was to calculate the projection matrix that represented the transformation for each pixel. This was calculated using the \emph{esthomog.m} function from the IVR course. When using the \emph{esthomog.m} function the order of the points is significant in order to ensure that all pixels are transferred in the correct order, preserving the image. For this reason, the corner points were first sorted by x-coordinate and split into two collections: the left-most and the right-most. From here it was possible to order the points in a clockwise order by further sorting the two collections by the y-coordinates. \\
+Various techniques were used in attempts to find the rectangular plane. 
 
-The moving image pixels were then transferred to the rectangle using the projection matrix found by \emph{esthomog.m}. \\
+\subsubsection{Pruning the Search Space}
+The search space was first pruned to find the foreground pixels, as the rectangular plane can only lie in the foreground (estimated at the mean of the z-values for that frame + 0.36), and in the bottom half of the image. The results of this can be found in Figure \ref{fig:notbg}.
 
-This entire process was repeated for each of the individual frames in both the video of the person walking and each frame in the animated image.
+\begin{figure}
+  \centering
+  \subfloat{\includegraphics[width=0.35\textwidth]{notbg1}} ~
+  \subfloat{\includegraphics[width=0.35\textwidth]{notbg3}} \\
+  \subfloat{\includegraphics[width=0.35\textwidth]{notbg4}} ~
+  \subfloat{\includegraphics[width=0.35\textwidth]{notbg5}}
+  \caption{Frames after finding the foreground pixels that match the correct colour. Some of the hand and leg pixels are included, and some of the rectangular pixels are missing.}
+  \label{fig:notbg}
+\end{figure}
+
+\subsubsection{RANSAC}
+A RANSAC plane-finding algorithm was tried. In each iteration, 3 random points were picked and a plane was fit to them. If the number of points within the search space that fit the plane (to a given threshold, around 0.005) was between 10000 and 15000, the plane was considered as a candidate plane. After 100 iterations, the candidate plane with the smallest sum error between itself and the points that lay on it was returned. 
+
+The problem with this method was that it was extremely slow, and often returned planes that did not contain all of the points contained in the rectangular plane. As such, it was rejected in favour of simpler methods.
+
+\subsubsection{Plane Fitting}
+Instead of randomly fitting planes to 3 points within the search space, a plane was fit to all the points of the largest connected components of the current search space (using \emph{fitplane.m}). As the pruned search space may not contain all of the pixels on the plane, the plane is fit to all of the pixels in the lower half of the image. The results of this can be seen in Figure \ref{fig:plane}.
+
+\begin{figure}
+  \centering
+  \subfloat{\includegraphics[width=0.35\textwidth]{plane1}} ~
+  \subfloat{\includegraphics[width=0.35\textwidth]{plane3}} \\
+  \subfloat{\includegraphics[width=0.35\textwidth]{plane4}} ~
+  \subfloat{\includegraphics[width=0.35\textwidth]{plane5}}
+  \caption{Largest connected component of the plane fit to the data. The leg pixels have been removed, and all of the rectangular plane is covered. However, more of the hand pixels are also in the plane.}
+  \label{fig:plane}
+\end{figure}
+
+\subsection{Video Transfer}
+
+\begin{wrapfigure}{r}{0.4\textwidth}
+  \vspace{-20pt}
+  \begin{center}
+    \includegraphics[width=0.38\textwidth]{corners}
+  \end{center}
+  \vspace{-17pt}
+  \caption{Corner points of the plane that were found. The coloured asterisks represent the corners selected by the system.}
+  \vspace{-25pt}
+\end{wrapfigure}
+
+Homographic transfer required the 4 corner points of the rectangle. To find this, the binary image of the rectangle was opened using a rectangular structuring element to emphasise the corners. Matlab's \emph{corner} function was then performed on the binary image. This produced many unnecessary corners, caused by the jagged edges of the binary image. As the largest connected component of the plane often included parts of the hand, these corners were filtered to ensure that they were not too high. The threshold was set at 130px higher than the lowest corner found. The four corners were selected as the two pairs of points with the largest distance between them. To protect against noise,  the corners selected had to be at least 50 pixels apart. 
+
+Transfer of the moving image was done similarly to that of the background image. As the plane rotated (such that the top-most point could either be in the left or right corner), the points had to be sorted both by x and y-coordinates, and then ordered clockwise.
 
 \section{Results}
 
+Our system performed perfectly in finding the background and transferring the background image for all 36 frames. This was likely due to the robust thresholding system. It also managed to find the rectangular plane and transfer the image on 32 out of 36 frames. The frames that failed, as well as explanations for failure are given below: 
+
+\begin{figure}[h]
+  \centering
+  \subfloat[Frame 14]{\includegraphics[width=0.25\textwidth]{fail0}} ~
+  \subfloat[Frame 15]{\includegraphics[width=0.25\textwidth]{fail1}} ~
+  \subfloat[Frame 19]{\includegraphics[width=0.25\textwidth]{fail2}} ~
+  \subfloat[Frame 26]{\includegraphics[width=0.25\textwidth]{fail3}} ~
+  \caption{Frames that failed to transfer the video images well. Most of these were due to problems with the fit of the plane.}
+  \label{fig:failvid}
+\end{figure}
+
+Plane-fitting was a large limitation - The rectangular plane was not always fully flat, causing several problems. In Frame 14, various points on the bottom-right of the actual plane did not fit to the calculated plane. As such, the corner-finding algorithm failed to find the actual corner. In Frame 15, creasing on the man's trousers caused pixels on them to fit to the plane. Since they were still relatively close to the rest of the plane, these pixels were not filtered out. In Frame 19, the calculated plane was a very poor fit to the actual plane, and only fit a diagonal strip from top left to bottom right. Hence it was impossible for the corner detection to pick out the correct points. In Frame 26, the correct plane was detected with the plane-fitting algorithm. However, parts of the man's hand also fit the plane, and the furthest distance between points was found incorrectly. 
+
+These results suggest that improvements should be made to the fitting of the plane. It might be beneficial to filter on the colour and z-value of the pixels after fitting the plane. Rudimentary versions of this were attempted, by only accepting darker colours (with a low RGB sum) and values smaller than a threshold value from the maximum (closest) z-value. This managed to remove a few incorrectly classified pixels, but were not helpful to the overall result. Better filter conditions are required to improve this. With a better filter, the threshold for the plane fit can then be relaxed, allowing the fit of all the points in the actual rectangular plane. Furthermore, improvements to the corner-picking algorithm could be used to prevent selection of pixels on the man's hand.
 
 \section{Conclusion}
+We have produced a system that reliably identifies background pixels and transfers a given image onto them, and finds and transfers a given video sequence onto a rectangular plane with reasonable accuracy. Areas for improvement include a more precise fit to the rectangular plane (perhaps back to a modified RANSAC method), as well as finding other features that separate the hand from the rectangular surface.
 
 \end{document}
 
