@@ -113,12 +113,16 @@ for i = 14 : 25,
     
     % Suitcase time
     mask = [zeros(270, 640) ; ones(200, 640); zeros(10, 640)];
+
+    not_background = final_z > mean_z + (3.6 * std_z);
+
     colourmask = (sum(final(:,:,4:6),3) < 150);
     colourmask = colourmask .* (sum(final(:,:,4:6),3) > 20);
     mask = mask .* colourmask;
     
     not_background = final_z > mean(mean(final_z)) + 0.37;
     not_background = not_background .* final_z < max(max(final_z)) - 0.025;
+
     not_background = not_background .* mask;
     [I,J] = find(not_background);
 
@@ -142,20 +146,96 @@ for i = 14 : 25,
                                         final(I(j),J(j),3)];
     end
 
+
     % Fit a plane to the filtered points, and check for all points to see
     % if they lie on the plane.
     [plane,fit] = fitplane(searchspace(:,3:5));
     
-    ss = zeros(480,640);
+    binary_image = zeros(480,640);
     for r = 290 : 470,
         for c = 1 : 640,
             xyzw = [final(r,c,1), final(r,c,2), final(r,c,3), 1];
             if ( abs(dot(xyzw, plane)) < 0.03 ),
 %               final(r,c,4:6) = [255 0 255];
-                ss(r,c) = 1;
+                binary_image(r,c) = 255;
             end
         end
     end
+    
+    im_opened = imopen(binary_image, strel('rectangle',[8 8]));
+    C = corner(im_opened, 'QualityLevel', 0.2);
+    
+    max_dist = 0;
+    point1 = [[],[]];
+    point2 = [[],[]];
+    point3 = [[],[]];
+    point4 = [[],[]];
+
+    for d1 = 1 : length(C),
+        for d2 = 2 : length(C),
+            if d1 == d2,
+                continue
+            end
+            distance = calculate_distance(C(d1,:),C(d2,:));
+            if distance > max_dist,
+                max_dist = distance;
+                point1(1) = C(d1,1);
+                point1(2) = C(d1,2);
+                point2(1) = C(d2,1);
+                point2(2) = C(d2,2);
+                index1 = d1;
+                index2 = d2;
+            end
+        end
+    end
+    
+    newC = setdiff(C,[point1 ; point2],'rows');
+    
+    max_dist = 0;
+    for d1 = 1 : length(newC),
+        for d2 = 2 : length(newC),
+            if d1 == d2,
+                continue
+            end
+            distance = calculate_distance(newC(d1,:),newC(d2,:));
+            if distance > max_dist,
+                d1_p1 = calculate_distance(newC(d1,:),point1);
+                d1_p2 = calculate_distance(newC(d1,:),point2);
+                d2_p1 = calculate_distance(newC(d2,:),point1);
+                d2_p2 = calculate_distance(newC(d2,:),point2);
+                
+                dists = [d1_p1, d1_p2, d2_p1, d2_p2];
+                
+                if (~isempty(find(dists<50, 1))),
+                    continue
+                end
+
+                max_dist = distance;
+                point3(1) = newC(d1,1);
+                point3(2) = newC(d1,2);
+                point4(1) = newC(d2,1);
+                point4(2) = newC(d2,2);
+
+            end
+        end
+    end
+
+    homo_points = [point1 ; point2 ; point3 ; point4];
+    
+    left_most = sortrows(homo_points,1);
+    right_most = sortrows(left_most(3:4,:),2);
+    left_most = sortrows(left_most(1:2,:),2);
+
+    top_left = left_most(1,:);
+    top_right = right_most(1,:);
+    bottom_right = right_most(2,:);
+    bottom_left = left_most(2,:);
+    
+    cat = imread('Images/cat.jpg');
+    % Find the homographic transfer
+    cat_x = size(cat, 2);
+    cat_y = size(cat, 1);
+    test_im_3 = zeros(480, 640, 3);
     
     % Find the largest connected component
     largest = getlargest(ss);
@@ -166,9 +246,36 @@ for i = 14 : 25,
         final(I(j), J(j),4:6) = [255 0 255];
     end
     
+
+    UV = [top_left', top_right', bottom_left', bottom_right']'; 
+    XY = [[1,1]',[1,cat_x]', [cat_y,1]', [cat_y,cat_x]']';    % source points
+
+    P = esthomog(UV,XY,4);
+
+    for r = 1 : size(final,2)
+        for c = 1 : size(final,1)
+            v=P*[r,c,1]';        % project destination pixel into source
+            y=round(v(1)/v(3));  % undo projective scaling and round to nearest integer
+            x=round(v(2)/v(3));
+            if (x >= 1) && (x <= cat_x) && (y >= 1) && (y <= cat_y)
+                final(c,r,4:6)=cat(y,x,:);   % transfer colour
+            end
+        end
+    end
+    
 %   RGB image layers must be converted to uint8 to display
-  imshow(uint8(final(:,:,4:6)));
+
+    figure, imshow(uint8(final(:,:,4:6)));
+    hold on
+    plot(C(:,1), C(:,2), 'b*');
+    plot(top_left(1), top_left(2), 'b+');
+    plot(top_right(1), top_right(2), 'g+');
+    plot(bottom_right(1), bottom_right(2), 'r+');
+    plot(bottom_left(1), bottom_left(2), 'y+');
+    hold off
    pause;
+   
+   close all;
 
 end    
 disp('Done');

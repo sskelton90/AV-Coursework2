@@ -1,9 +1,11 @@
-function [points_in_plane, failed] = growplane(all_points)
+function [plane_points, failed] = growplane(all_points)
     
     xyz   = all_points(:,3:5);
     s     = size(all_points, 1);
     
-    tol   = 0.005;
+    tol   = 0.0001;
+    
+    min_dist = 100000000;
     
     for i = 1:100,
 
@@ -18,6 +20,8 @@ function [points_in_plane, failed] = growplane(all_points)
 
         points_in_plane = [[],[]];
         currlen = 0;
+        totaldist = 0;
+        
         
         % Then iterate over all the points
         for j = 1 : s,
@@ -25,6 +29,7 @@ function [points_in_plane, failed] = growplane(all_points)
             %if ~(xyz(j,1) == 0 && xyz(j,2) == 0 && xyz(j,3) == 0),
                 curr_d = dot(x_pdt', xyz(j,:) - xyz(idx(1),:)); 
                 if (abs(curr_d) < tol),
+                    totaldist = totaldist + abs(curr_d);
                     currlen         = currlen + 1;                    
                     points_in_plane = [points_in_plane; all_points(j,1:2)];
                 end
@@ -37,17 +42,16 @@ function [points_in_plane, failed] = growplane(all_points)
         
         if (currlen > 10000 && currlen < 16000),
             failed = 0;
+            if (totaldist < min_dist),
+                plane_points = points_in_plane;
+            end
             disp('Converged.');
             disp(['Iteration ' num2str(i) '. Points: ' num2str(currlen)]);
-            return;
-        elseif (i == 100),
-            disp('Failed.');
-            failed = 1;
+%             return;
         end
         
         disp(['Iteration ' num2str(i) '. Points: ' num2str(currlen)]);
         
     end
-    
-    
+   
 end
