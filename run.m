@@ -6,7 +6,7 @@ rect  = [ 41, 130; 477, 91; 474, 452; 40, 429 ];
 % If we want to redo these... 
 find_new_points = 0; 
 
-% First pick out the trapezoid
+%% Finding the trapezoid and homographic transfer
 test_im = find_trapezoid(480, 640, rect);
 
 % Find the homographic transfer
@@ -54,29 +54,27 @@ for i = 1 : n_files,
     end
 end
 
-%% Separate the man from the wall.
 clear 'xyzrgb_*';
 clear UV; clear XY;
+
 %% First, use the average z-coords of each pixel to decide where the wall is
 new_avg_z = avg_z(:,:,1:7);
 
 mean_z = mean(new_avg_z, 3);
 variance_z = (avg_z - repmat(mean_z, [1,1,n_files])).^2;
-
 std_z  = mean(variance_z, 3);
-[I,J] = find(std_z == 0);
 
-[~,~,v] = find(std_z);
-new_std = mean(v);
-
-disp(['Number of pixels with standard deviation 0: ' num2str(length(I))]);
-disp(['New standard deviation for these pixels: ' num2str(new_std)]);
-
-for i = 1 : length(I),
-    if (I(i) < 240),
-        std_z(I(i), J(i)) = new_std;
-    end
-end
+% [~,~,v] = find(std_z);
+% new_std = mean(v);
+% 
+% disp(['Number of pixels with standard deviation 0: ' num2str(length(I))]);
+% disp(['New standard deviation for these pixels: ' num2str(new_std)]);
+% 
+% for i = 1 : length(I),
+%     if (I(i) < 240),
+%         std_z(I(i), J(i)) = new_std;
+%     end
+% end
 
 std_z(1:240,:) = 0.1;
 threshold = mean_z + std_z;
@@ -99,7 +97,7 @@ end
 
 %%
 
-for i = 15 : 25,
+for i = 14 : 25,
 
     final = images{i};
     final_z = final(:,:,3);
@@ -112,7 +110,6 @@ for i = 15 : 25,
     for j = 1 : length(I),
         final(I(j),J(j),4:6) = test_im_2(I(j),J(j),:);   % transfer colour
     end
-    % figure, imshow(uint8(final(:,:,4:6)))
     
     % Suitcase time
     mask = [zeros(270, 640) ; ones(200, 640); zeros(10, 640)];
@@ -120,12 +117,13 @@ for i = 15 : 25,
     colourmask = colourmask .* (sum(final(:,:,4:6),3) > 20);
     mask = mask .* colourmask;
     
-    not_background = final_z > mean(mean(final_z)) + 0.36;
+    not_background = final_z > mean(mean(final_z)) + 0.37;
+    not_background = not_background .* final_z < max(max(final_z)) - 0.025;
     not_background = not_background .* mask;
     [I,J] = find(not_background);
 
-    
     for j = 1 : length(I),
+        % Red denotes that it is not in the background
         final(I(j),J(j),4:6) = [255 0 0];   % transfer colour
     end
     
@@ -135,45 +133,39 @@ for i = 15 : 25,
 
     searchspace = zeros(length(I),5);
     for j = 1 : length(I),
+        % Light blue denotes that it is part of the largest connected
+        % component
+        
         final(I(j), J(j),4:6) = [0 255 255];
         searchspace(j,:) = [I(j), J(j), final(I(j),J(j),1), ... 
-                                final(I(j),J(j),2), ... 
-                                final(I(j),J(j),3)];
-        
+                                        final(I(j),J(j),2), ... 
+                                        final(I(j),J(j),3)];
     end
-  
-%     disp('Growing plane now...');
-%     
-%      [points2, failed] = growplane(searchspace);
-% 
-%     if (~failed),
-%         disp(['Number of points: ' num2str(size(points2,1))]);
-%         
-%         for i0 = 1 : size(points2,1),
-%             final(points2(i0,1),points2(i0,2),4:6) = [160 160 160];   % transfer colour
-%         end
-%         
-%         imshow(uint8(final(:,:,4:6)));
-%         pause;
-%     else
-%         disp('lolno');
-%     end
 
     % Fit a plane to the filtered points, and check for all points to see
     % if they lie on the plane.
     [plane,fit] = fitplane(searchspace(:,3:5));
     
-    for r = 300 : 470,
+    ss = zeros(480,640);
+    for r = 290 : 470,
         for c = 1 : 640,
             xyzw = [final(r,c,1), final(r,c,2), final(r,c,3), 1];
-            if ( abs(dot(xyzw, plane)) < 0.02 ),
-                final(r,c,4:6) = [255 0 255];
+            if ( abs(dot(xyzw, plane)) < 0.03 ),
+%               final(r,c,4:6) = [255 0 255];
+                ss(r,c) = 1;
             end
         end
     end
     
+    % Find the largest connected component
+    largest = getlargest(ss);
+    [I,J] = find(largest);
+
+    for j = 1 : length(I),
+        % Pink denotes that it is part of largest component on the plane
+        final(I(j), J(j),4:6) = [255 0 255];
+    end
     
-     
 %   RGB image layers must be converted to uint8 to display
   imshow(uint8(final(:,:,4:6)));
    pause;
