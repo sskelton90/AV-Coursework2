@@ -97,8 +97,8 @@ end
 
 %%
 
-for i = 14 : 25,
-
+for i = 1 : n_files,
+    
     final = images{i};
     final_z = final(:,:,3);
 
@@ -114,22 +114,21 @@ for i = 14 : 25,
     % Suitcase time
     mask = [zeros(270, 640) ; ones(200, 640); zeros(10, 640)];
 
-    not_background = final_z > mean_z + (3.6 * std_z);
+    %not_background = final_z > mean_z + (3.6 * std_z);
 
     colourmask = (sum(final(:,:,4:6),3) < 150);
     colourmask = colourmask .* (sum(final(:,:,4:6),3) > 20);
     mask = mask .* colourmask;
     
-    not_background = final_z > mean(mean(final_z)) + 0.37;
-    not_background = not_background .* final_z < max(max(final_z)) - 0.025;
+    not_background = final_z > mean(mean(final_z)) + 0.36;
 
     not_background = not_background .* mask;
     [I,J] = find(not_background);
 
-    for j = 1 : length(I),
-        % Red denotes that it is not in the background
-        final(I(j),J(j),4:6) = [255 0 0];   % transfer colour
-    end
+%     for j = 1 : length(I),
+%         % Red denotes that it is not in the background
+%         final(I(j),J(j),4:6) = [255 0 0];   % transfer colour
+%     end
     
     % Find the largest connected component
     largest = getlargest(not_background);
@@ -140,7 +139,7 @@ for i = 14 : 25,
         % Light blue denotes that it is part of the largest connected
         % component
         
-        final(I(j), J(j),4:6) = [0 255 255];
+        %final(I(j), J(j),4:6) = [0 255 255];
         searchspace(j,:) = [I(j), J(j), final(I(j),J(j),1), ... 
                                         final(I(j),J(j),2), ... 
                                         final(I(j),J(j),3)];
@@ -151,38 +150,53 @@ for i = 14 : 25,
     % if they lie on the plane.
     [plane,fit] = fitplane(searchspace(:,3:5));
     
-    binary_image = zeros(480,640);
+    ss = zeros(480,640);
     for r = 290 : 470,
         for c = 1 : 640,
             xyzw = [final(r,c,1), final(r,c,2), final(r,c,3), 1];
-            if ( abs(dot(xyzw, plane)) < 0.03 ),
-%               final(r,c,4:6) = [255 0 255];
-                binary_image(r,c) = 255;
+            if ( abs(dot(xyzw, plane)) < 0.035 ),
+                ss(r,c) = 1;
             end
         end
     end
+
+    % Find the largest connected component
+    largest = getlargest(ss);
+    [I,J] = find(largest);
     
+    binary_image = zeros(480,640);
+    for j = 1 : length(I),
+            % Pink denotes that it is part of largest component on the plane
+%            final(I(j), J(j),4:6) = [255 0 255];
+             binary_image(I(j),J(j)) = 255;
+    end
+    
+    % Find the corners  
     im_opened = imopen(binary_image, strel('rectangle',[8 8]));
     C = corner(im_opened, 'QualityLevel', 0.2);
     
+    maxc = max(C);
+    maxc = maxc(2);
+    minc = min(C);
+    meancx = 0.5 * (maxc(1) + minc(1));
+    
+    % If the point is higher than the max possible value
+    I = find(C(:,2) < maxc - 130);
+    
+    % ... and too close to the centre
+%     J = find(abs(C(:,1) - meancx) < 70);
+%     I = intersect(I,J);
+    C(I,:) = [];
+
     max_dist = 0;
-    point1 = [[],[]];
-    point2 = [[],[]];
-    point3 = [[],[]];
-    point4 = [[],[]];
 
     for d1 = 1 : length(C),
-        for d2 = 2 : length(C),
-            if d1 == d2,
-                continue
-            end
+        for d2 = d1 + 1 : length(C),
             distance = calculate_distance(C(d1,:),C(d2,:));
             if distance > max_dist,
                 max_dist = distance;
-                point1(1) = C(d1,1);
-                point1(2) = C(d1,2);
-                point2(1) = C(d2,1);
-                point2(2) = C(d2,2);
+                point1 = C(d1,:);
+                point2 = C(d2,:);
                 index1 = d1;
                 index2 = d2;
             end
@@ -193,10 +207,7 @@ for i = 14 : 25,
     
     max_dist = 0;
     for d1 = 1 : length(newC),
-        for d2 = 2 : length(newC),
-            if d1 == d2,
-                continue
-            end
+        for d2 = d1 + 1 : length(newC),
             distance = calculate_distance(newC(d1,:),newC(d2,:));
             if distance > max_dist,
                 d1_p1 = calculate_distance(newC(d1,:),point1);
@@ -211,11 +222,8 @@ for i = 14 : 25,
                 end
 
                 max_dist = distance;
-                point3(1) = newC(d1,1);
-                point3(2) = newC(d1,2);
-                point4(1) = newC(d2,1);
-                point4(2) = newC(d2,2);
-
+                point3 = newC(d1,:);
+                point4 = newC(d2,:);
             end
         end
     end
@@ -236,16 +244,6 @@ for i = 14 : 25,
     cat_x = size(cat, 2);
     cat_y = size(cat, 1);
     test_im_3 = zeros(480, 640, 3);
-    
-    % Find the largest connected component
-    largest = getlargest(ss);
-    [I,J] = find(largest);
-
-    for j = 1 : length(I),
-        % Pink denotes that it is part of largest component on the plane
-        final(I(j), J(j),4:6) = [255 0 255];
-    end
-    
 
     UV = [top_left', top_right', bottom_left', bottom_right']'; 
     XY = [[1,1]',[1,cat_x]', [cat_y,1]', [cat_y,cat_x]']';    % source points
@@ -265,17 +263,14 @@ for i = 14 : 25,
     
 %   RGB image layers must be converted to uint8 to display
 
-    figure, imshow(uint8(final(:,:,4:6)));
-    hold on
-    plot(C(:,1), C(:,2), 'b*');
-    plot(top_left(1), top_left(2), 'b+');
-    plot(top_right(1), top_right(2), 'g+');
-    plot(bottom_right(1), bottom_right(2), 'r+');
-    plot(bottom_left(1), bottom_left(2), 'y+');
-    hold off
-   pause;
-   
-   close all;
-
+    imshow(uint8(final(:,:,4:6)));
+%    hold on
+%    plot(C(:,1), C(:,2), 'b*');
+%     plot(top_left(1), top_left(2), 'b+');
+%     plot(top_right(1), top_right(2), 'g+');
+%     plot(bottom_right(1), bottom_right(2), 'r+');
+%     plot(bottom_left(1), bottom_left(2), 'y+');
+%    hold off
+    pause;
 end    
 disp('Done');
