@@ -1,4 +1,6 @@
 function [test_im] = find_trapezoid( r, c, rect )
+% FIND_TRAPEZOID Returns the pixels within the corners of a given 4-sided
+% shape, from a bounded image of r rows and c columns 
 
     TOP_LEFT = 1; TOP_RIGHT = 2; BOTTOM_RIGHT = 3; BOTTOM_LEFT = 4;
     X_VAL = 1; Y_VAL = 2;

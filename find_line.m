@@ -1,4 +1,7 @@
 function [bound] = find_line( rect, start, finish, dir )
+% FIND_LINE Returns the pixels on the line within the 4 given corners of a 
+% rectangle (or any 4-sided shape), for a given start pixel, end pixel and 
+% direction 
 
     X_VAL = 1; Y_VAL = 2;
 

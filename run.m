@@ -1,3 +1,7 @@
+%% run
+% This file contains the main method for running the sequence of images and
+% homography
+
 %% Toggles
 % Toggle mouse input to find new coordinates
 find_new_points = 0; 
@@ -110,7 +114,7 @@ end
 
 %% Find pixels for transfer, carry out transfer
 
-for i = 13 : 28,
+for i = 1 : n_files,
     disp('-------------------------------------------------');
     disp(['Using file ' num2str(i)]);
     final = images{i};
